@@ -1,4 +1,4 @@
-#!/usr/bin/env lua
+---@diagnostic disable: undefined-global
 
 --[[
     The MIT License
@@ -32,7 +32,7 @@ __luapack_modules__ = {
 %s
 }
 __luapack_cache__ = {}
-__luapack_require__ = function(idx) 
+__luapack_require__ = function(idx)
     local cache = __luapack_cache__[idx]
     if cache then
         return cache
@@ -44,15 +44,14 @@ end
 ]]
 
 -- python-like path helpers
-path = {
-    isrelative = function(path) 
+local path = {
+    isrelative = function(path)
         return path:sub(1, 1) ~= '/'
     end,
-    isabsolute = function(path) 
+    isabsolute = function(path)
         return path:sub(1, 1) == '/'
     end,
     join = function(base, addon)
-
         -- addon path must be relative
         if path.isabsolute(addon) then
             return addon
@@ -77,13 +76,13 @@ path = {
             return addon
         end
 
-        return newpath 
+        return newpath
     end,
     isdir = function(path)
-        return os.execute("test -d "..path) == 0
+        return os.execute("test -d " .. path) == 0
     end,
     isfile = function(path)
-        return os.execute("test -f "..path) == 0
+        return os.execute("test -f " .. path) == 0
     end,
     abspath = function(path)
         local cmd = string.format("realpath %s", path)
@@ -99,16 +98,15 @@ path = {
     end
 }
 
-function strip(str)
+local function strip(str)
     return string.gsub(str, "%s", "")
 end
 
-function require_string(idx)
+local function require_string(idx)
     return string.format("__luapack_require__(%d)\n", idx)
 end
 
-function import(module_path)
-
+local function import(module_path)
     local cache_idx = module_index[module_path]
     if cache_idx then
         return require_string(cache_idx)
@@ -127,12 +125,10 @@ function import(module_path)
     return require_string(idx)
 end
 
-function transform(source, source_path)
-
+local function transform(source, source_path)
     local context = path.abspath(path.dirname(source_path))
     local pattern = "require%s*%(?%s*[\"'](.-)[\"']%s*%)?"
     return string.gsub(source, pattern, function(name)
-
         local path_to_module = path.join(context, name)
 
         if not path.isfile(path_to_module) then
@@ -143,13 +139,12 @@ function transform(source, source_path)
     end)
 end
 
-function generate_module_header()
-
+local function generate_module_header()
     if #modules < 1 then
         return ''
     end
 
-    function left_pad(source, padding, ch)
+    local function left_pad(source, padding, ch)
         ch = ch or ' '
         local repl = function(str)
             return string.rep(ch, padding) .. str
@@ -157,12 +152,13 @@ function generate_module_header()
         return string.gsub(source, '(.-\n)', repl)
     end
 
-    function pad(source)
+    local function pad(source)
         source = left_pad(source, 4)
         source = string.format('(function()\n%s\nend),\n', source)
         source = left_pad(source, 4)
         return source
     end
+
     local modstring = ''
     for i = 1, #modules do
         modstring = modstring .. pad(modules[i])
@@ -175,7 +171,7 @@ function generate_module_header()
     return header
 end
 
-function main(argv)
+local function main(argv)
     if #argv == 0 then
         local usage = string.format('usage: %s <toplevel-module>.lua', argv[0])
         print(usage)
@@ -193,10 +189,10 @@ function main(argv)
     source = transform(source, path_to_entry)
     local header = generate_module_header()
 
-    source = header..'\n'..source
+    source = header .. '\n' .. source
 
     local out = string.gsub(entry, "%.lua", "")
-    out = out..".bundle.lua"
+    out = out .. ".bundle.lua"
     out = path.basename(out)
     io.open(out, "w"):write(source)
 
