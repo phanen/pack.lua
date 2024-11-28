@@ -1,4 +1,4 @@
----@diagnostic disable: undefined-global
+---@diagnostic disable: lowercase-global
 
 --[[
     The MIT License
@@ -43,8 +43,22 @@ __luapack_require__ = function(idx)
 end
 ]]
 
+local function file_exists(filename)
+    local f, err = io.open(filename, "r")
+    if f then
+        io.close(f)
+        return true
+    elseif err == "No such file or directory" then
+        return false
+    end
+end
+
+if (file_exists("minify.lua")) then
+    local minify = require "minify"
+end
+
 -- python-like path helpers
-local path = {
+path = {
     isrelative = function(path)
         return path:sub(1, 1) ~= '/'
     end,
@@ -98,15 +112,15 @@ local path = {
     end
 }
 
-local function strip(str)
+function strip(str)
     return string.gsub(str, "%s", "")
 end
 
-local function require_string(idx)
+function require_string(idx)
     return string.format("__luapack_require__(%d)\n", idx)
 end
 
-local function import(module_path)
+function import(module_path)
     local cache_idx = module_index[module_path]
     if cache_idx then
         return require_string(cache_idx)
@@ -125,7 +139,7 @@ local function import(module_path)
     return require_string(idx)
 end
 
-local function transform(source, source_path)
+function transform(source, source_path)
     local context = path.abspath(path.dirname(source_path))
     local pattern = "require%s*%(?%s*[\"'](.-)[\"']%s*%)?"
     return string.gsub(source, pattern, function(name)
@@ -139,12 +153,12 @@ local function transform(source, source_path)
     end)
 end
 
-local function generate_module_header()
+function generate_module_header()
     if #modules < 1 then
         return ''
     end
 
-    local function left_pad(source, padding, ch)
+    function left_pad(source, padding, ch)
         ch = ch or ' '
         local repl = function(str)
             return string.rep(ch, padding) .. str
@@ -152,7 +166,7 @@ local function generate_module_header()
         return string.gsub(source, '(.-\n)', repl)
     end
 
-    local function pad(source)
+    function pad(source)
         source = left_pad(source, 4)
         source = string.format('(function()\n%s\nend),\n', source)
         source = left_pad(source, 4)
@@ -161,7 +175,12 @@ local function generate_module_header()
 
     local modstring = ''
     for i = 1, #modules do
-        modstring = modstring .. pad(modules[i])
+        if (file_exists("minify.lua")) then
+            local did_minify, module = Minify(modules[i])
+            modstring = modstring .. pad(module)
+        else
+            modstring = modstring .. pad(modules[i])
+        end
     end
     if #modules > 1 then
         -- strip the last newline, make it look pretty
@@ -171,7 +190,7 @@ local function generate_module_header()
     return header
 end
 
-local function main(argv)
+function main(argv)
     if #argv == 0 then
         local usage = string.format('usage: %s <toplevel-module>.lua', argv[0])
         print(usage)
