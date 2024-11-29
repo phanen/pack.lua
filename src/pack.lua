@@ -1,4 +1,4 @@
-#!/usr/bin/env lua
+---@diagnostic disable: lowercase-global
 
 --[[
     The MIT License
@@ -32,7 +32,7 @@ __luapack_modules__ = {
 %s
 }
 __luapack_cache__ = {}
-__luapack_require__ = function(idx) 
+__luapack_require__ = function(idx)
     local cache = __luapack_cache__[idx]
     if cache then
         return cache
@@ -43,16 +43,29 @@ __luapack_require__ = function(idx)
 end
 ]]
 
+local function file_exists(filename)
+    local f, err = io.open(filename, "r")
+    if f then
+        io.close(f)
+        return true
+    elseif err == "No such file or directory" then
+        return false
+    end
+end
+
+if (file_exists("minify.lua")) then
+    local minify = require "minify"
+end
+
 -- python-like path helpers
 path = {
-    isrelative = function(path) 
+    isrelative = function(path)
         return path:sub(1, 1) ~= '/'
     end,
-    isabsolute = function(path) 
+    isabsolute = function(path)
         return path:sub(1, 1) == '/'
     end,
     join = function(base, addon)
-
         -- addon path must be relative
         if path.isabsolute(addon) then
             return addon
@@ -77,13 +90,13 @@ path = {
             return addon
         end
 
-        return newpath 
+        return newpath
     end,
     isdir = function(path)
-        return os.execute("test -d "..path) == 0
+        return os.execute("test -d " .. path) == 0
     end,
     isfile = function(path)
-        return os.execute("test -f "..path) == 0
+        return os.execute("test -f " .. path) == 0
     end,
     abspath = function(path)
         local cmd = string.format("realpath %s", path)
@@ -108,7 +121,6 @@ function require_string(idx)
 end
 
 function import(module_path)
-
     local cache_idx = module_index[module_path]
     if cache_idx then
         return require_string(cache_idx)
@@ -128,11 +140,9 @@ function import(module_path)
 end
 
 function transform(source, source_path)
-
     local context = path.abspath(path.dirname(source_path))
     local pattern = "require%s*%(?%s*[\"'](.-)[\"']%s*%)?"
     return string.gsub(source, pattern, function(name)
-
         local path_to_module = path.join(context, name)
 
         if not path.isfile(path_to_module) then
@@ -144,7 +154,6 @@ function transform(source, source_path)
 end
 
 function generate_module_header()
-
     if #modules < 1 then
         return ''
     end
@@ -163,9 +172,15 @@ function generate_module_header()
         source = left_pad(source, 4)
         return source
     end
+
     local modstring = ''
     for i = 1, #modules do
-        modstring = modstring .. pad(modules[i])
+        if (file_exists("minify.lua")) then
+            local did_minify, module = Minify(modules[i])
+            modstring = modstring .. pad(module)
+        else
+            modstring = modstring .. pad(modules[i])
+        end
     end
     if #modules > 1 then
         -- strip the last newline, make it look pretty
@@ -193,10 +208,10 @@ function main(argv)
     source = transform(source, path_to_entry)
     local header = generate_module_header()
 
-    source = header..'\n'..source
+    source = header .. '\n' .. source
 
     local out = string.gsub(entry, "%.lua", "")
-    out = out..".bundle.lua"
+    out = out .. ".bundle.lua"
     out = path.basename(out)
     io.open(out, "w"):write(source)
 

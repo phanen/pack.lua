@@ -25,6 +25,7 @@ This generates a bundled file named `<toplevel-module>.bundle.lua` in the curren
 ### Important Notes:
 - **File extensions:** When using `require`, you **must** include the `.lua` file extension. Any `require` statements without `.lua` will remain unmodified in the bundled output.
 - **Circular dependencies:** **pack.lua** does not detect or handle circular dependencies. If your source tree contains such dependencies, the bundling process may result in a stack overflow.
+- **Minification:** Copy `minify.lua` from `src` folder to working directory to also minify while packing! This functionality was provided thanks to [stravant/LuaMinify](https://github.com/stravant/LuaMinify)
 
 ## How It Works
 **pack.lua** bundles Lua source code into a single file by wrapping and consolidating the input source tree. 
