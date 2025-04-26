@@ -143,8 +143,12 @@ function transform(source, source_path)
     local context = path.abspath(path.dirname(source_path))
     local pattern = "require%s*%(?%s*[\"'](.-)[\"']%s*%)?"
     return string.gsub(source, pattern, function(name)
-        local path_to_module = path.join(context, name)
-
+        -- local path_to_module = path.join(context, name)
+        local modinfo = vim.loader.find(name)[1]
+        if not modinfo then
+            return nil
+        end
+        local path_to_module = modinfo.modpath
         if not path.isfile(path_to_module) then
             return nil
         end
